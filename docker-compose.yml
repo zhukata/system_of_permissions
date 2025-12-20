@@ -1,0 +1,90 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:17
+    container_name: ars_postgres
+    environment:
+      POSTGRES_DB: ars
+      POSTGRES_USER: ars
+      POSTGRES_PASSWORD: ars
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ars"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:4-management
+    container_name: ars_rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"   # AMQP port
+      - "15672:15672" # Management UI
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  ars-api:
+    build:
+      context: ./ars
+      dockerfile: Dockerfile
+    container_name: ars_api
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://ars:ars@postgres:5432/ars
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      RABBITMQ_VHOST: /
+    volumes:
+      - ./ars:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
+  ars-worker:
+    build:
+      context: ./ars
+      dockerfile: Dockerfile
+    container_name: ars_worker
+    command: python run_worker.py
+    environment:
+      DATABASE_URL: postgresql://ars:ars@postgres:5432/ars
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      RABBITMQ_VHOST: /
+    volumes:
+      - ./ars:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      ars-api:
+        condition: service_started
+    restart: unless-stopped
+    # Для масштабирования убрать container_name и запустить:
+    # docker-compose up -d --scale ars-worker=3
+
+volumes:
+  postgres_data:
+  rabbitmq_data:
