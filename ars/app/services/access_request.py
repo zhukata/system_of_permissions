@@ -8,7 +8,7 @@ import logging
 from sqlalchemy.orm import Session
 
 from app.core.rabbitmq import get_publisher
-from app.models.access_request import AccessRequest
+from common.models.access_request import AccessRequest
 from app.schemas.access_request import AccessRequestCreate
 
 logger = logging.getLogger(__name__)
@@ -64,7 +64,7 @@ def update_request_status(
     
     Используется Worker'ом для обновления статуса после обработки.
     """
-    from app.models.access_request import AccessRequestStatus
+    from common.models.access_request import AccessRequestStatus
     
     req = get_access_request(db, request_id)
     if not req:

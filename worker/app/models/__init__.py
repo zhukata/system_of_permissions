@@ -1,2 +1,0 @@
-"""SQLAlchemy models for worker."""
-

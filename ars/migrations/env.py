@@ -5,8 +5,8 @@ from sqlalchemy import pool
 
 from alembic import context
 
-from app.models.access_request import Base
-from app.models import access_request
+from common.models.access_request import Base
+from common.models import access_request
 from app.core.config import settings
 
 # this is the Alembic Config object, which provides

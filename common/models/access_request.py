@@ -3,10 +3,8 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import Column, DateTime, Enum, String
-from sqlalchemy.orm import declarative_base
+from common.db.base import Base
 from sqlalchemy.dialects.postgresql import UUID
-
-Base = declarative_base()
 
 
 class AccessRequestStatus(str, enum.Enum):
@@ -22,6 +20,12 @@ class AccessAction(str, enum.Enum):
 
 
 class AccessRequest(Base):
+    """
+    Модель заявки на доступ.
+    
+    ARS хранит только заявки и их статусы.
+    Вся бизнес-логика (конфликты, права) - в Identity+Catalog Service.
+    """
     __tablename__ = "access_requests"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -41,5 +45,5 @@ class AccessRequest(Base):
         onupdate=datetime.utcnow,
         nullable=False,
     )
+    # Опционально: причина отклонения
     rejection_reason = Column(String, nullable=True)
-
