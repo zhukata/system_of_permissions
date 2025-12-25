@@ -84,8 +84,6 @@ services:
       ars-api:
         condition: service_started
     restart: unless-stopped
-    # Для масштабирования убрать container_name и запустить:
-    # docker-compose up -d --scale ars-worker=3
 
   registry:
     build:
