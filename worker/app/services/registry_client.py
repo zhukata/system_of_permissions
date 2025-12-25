@@ -1,6 +1,5 @@
 import logging
 import uuid
-from typing import List, Tuple
 
 import httpx
 
@@ -10,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 class RegistryClient:
-    """Клиент для запросов в Registry (source of truth)."""
+    """Клиент для запросов в Registry (internal API only)."""
 
     def __init__(self):
         self._client = httpx.Client(
@@ -18,16 +17,20 @@ class RegistryClient:
             timeout=30.0,
         )
 
-    def get_user_permission_groups(self, user_id: uuid.UUID) -> List[dict]:
-        resp = self._client.get(f"/users/{user_id}/permission-groups")
+    def get_user_permission_groups(self, user_id: uuid.UUID) -> list[dict]:
+        resp = self._client.get(
+            f"/internal/users/{user_id}/permission-groups"
+        )
         resp.raise_for_status()
         return resp.json()
 
     def check_conflicts(
-        self, user_current_groups: list[str], new_group_id: uuid.UUID
-    ) -> Tuple[bool, str | None]:
+        self,
+        user_current_groups: list[str],
+        new_group_id: uuid.UUID,
+    ) -> tuple[bool, str | None]:
         resp = self._client.post(
-            "/permission-groups/check-conflicts",
+            "/internal/permission-groups/check-conflicts",
             json={
                 "user_current_groups": user_current_groups,
                 "new_group_id": str(new_group_id),
@@ -35,20 +38,23 @@ class RegistryClient:
         )
         resp.raise_for_status()
         data = resp.json()
-        return data.get("has_conflict", False), data.get("reason")
+        return data["has_conflict"], data.get("reason")
 
-    def grant_permission_group(self, user_id: uuid.UUID, group_id: uuid.UUID) -> bool:
-        resp = self._client.post(f"/users/{user_id}/permission-groups/{group_id}/grant")
-        resp.raise_for_status()
-        return True
-
-    def revoke_permission_group(self, user_id: uuid.UUID, group_id: uuid.UUID) -> bool:
+    def grant_permission_group(
+        self, user_id: uuid.UUID, group_id: uuid.UUID
+    ) -> None:
         resp = self._client.post(
-            f"/users/{user_id}/permission-groups/{group_id}/revoke"
+            f"/internal/users/{user_id}/permission-groups/{group_id}/grant"
         )
         resp.raise_for_status()
-        return True
+
+    def revoke_permission_group(
+        self, user_id: uuid.UUID, group_id: uuid.UUID
+    ) -> None:
+        resp = self._client.post(
+            f"/internal/users/{user_id}/permission-groups/{group_id}/revoke"
+        )
+        resp.raise_for_status()
 
     def close(self):
         self._client.close()
-

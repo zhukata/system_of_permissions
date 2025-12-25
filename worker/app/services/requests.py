@@ -2,7 +2,7 @@ import logging
 
 from sqlalchemy.orm import Session
 
-from app.models.access_request import AccessRequest, AccessRequestStatus
+from common.models.access_request import AccessRequest, AccessRequestStatus
 
 logger = logging.getLogger(__name__)
 
@@ -25,8 +25,5 @@ def update_request_status(
     if rejection_reason:
         req.rejection_reason = rejection_reason
 
-    db.commit()
-    db.refresh(req)
     logger.info(f"Статус заявки {request_id} обновлен на {status}")
     return req
-

@@ -1,7 +1,6 @@
 import json
 import logging
 import signal
-import sys
 import uuid
 from typing import Optional, Any
 
@@ -12,7 +11,8 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.db import SessionLocal
 from app.core.rabbitmq import ACCESS_REQUEST_QUEUE
-from app.models.access_request import AccessRequestStatus
+from common.enums import AccessAction
+from common.models.access_request import AccessRequestStatus
 from app.services.registry_client import RegistryClient
 from app.services.requests import get_access_request, update_request_status
 
@@ -34,6 +34,9 @@ class AccessRequestWorker:
 
     def _connect(self) -> None:
         """Установка соединения с RabbitMQ."""
+        self.registry.close()
+        self.registry = RegistryClient()
+
         params = pika.URLParameters(settings.rabbitmq_url)
         self.connection = pika.BlockingConnection(params)
         self.channel = self.connection.channel()
@@ -54,27 +57,46 @@ class AccessRequestWorker:
             db.rollback()
             logger.error(f"Ошибка обновления статуса {request_id} на {status}: {e}")
 
-    def _process_business_logic(self, db: Session, request: Any) -> tuple[bool, Optional[str]]:
+    def _process_access_request(
+        self,
+        request: Any,
+    ) -> tuple[bool, Optional[str]]:
         """
-        Ядро логики: проверка конфликтов и выполнение GRANT/REVOKE.
-        Возвращает (успех, причина_отказа).
+        Обрабатывает заявку на доступ:
+        - проверяет конфликты
+        - выполняет GRANT / REVOKE через Registry
         """
-        # 1. Проверка конфликтов (только для выдачи прав)
-        if request.action.value == "GRANT":
-            current_groups = self.registry.get_user_permission_groups(request.user_id)
-            group_ids = [g.get("id") for g in current_groups]
-            
-            has_conflict, reason = self.registry.check_conflicts(group_ids, request.permission_group_id)
+
+        if request.action is AccessAction.GRANT:
+            current_groups = self.registry.get_user_permission_groups(
+                request.user_id
+            )
+            group_ids = [g["id"] for g in current_groups]
+
+            has_conflict, reason = self.registry.check_conflicts(
+                group_ids,
+                request.permission_group_id,
+            )
             if has_conflict:
                 return False, reason or "Конфликт прав доступа"
 
-        # 2. Выполнение действия
-        if request.action.value == "GRANT":
-            success = self.registry.grant_permission_group(request.user_id, request.permission_group_id)
-        else:
-            success = self.registry.revoke_permission_group(request.user_id, request.permission_group_id)
-            
-        return success, None if success else "Ошибка внешней системы (Registry API)"
+        try:
+            if request.action is AccessAction.GRANT:
+                self.registry.grant_permission_group(
+                    request.user_id,
+                    request.permission_group_id,
+                )
+            else:
+                self.registry.revoke_permission_group(
+                    request.user_id,
+                    request.permission_group_id,
+                )
+        except Exception as e:
+            logger.error(f"Ошибка Registry API: {e}")
+            return False, "Ошибка внешней системы (Registry API)"
+
+        return True, None
+
 
     def _on_message_callback(self, ch: BlockingChannel, method: Any, properties: Any, body: bytes):
         """Обработка входящего сообщения из очереди."""

@@ -1,20 +1,9 @@
 import uuid
 from datetime import datetime
-from enum import Enum
 
 from pydantic import BaseModel
 
-
-class AccessAction(str, Enum):
-    GRANT = "GRANT"
-    REVOKE = "REVOKE"
-
-
-class AccessRequestStatus(str, Enum):
-    PENDING = "PENDING"
-    PROCESSING = "PROCESSING"
-    APPROVED = "APPROVED"
-    REJECTED = "REJECTED"
+from common.enums import AccessRequestStatus, AccessAction
 
 
 class AccessRequestCreate(BaseModel):
@@ -42,5 +31,5 @@ class AccessRequestResponse(BaseModel):
 class UserPermissionsResponse(BaseModel):
     """Схема для получения прав пользователя (read-модель)."""
     user_id: uuid.UUID
-    permission_groups: list[dict]  # Будет заполняться из Identity+Catalog Service
+    permission_groups: list[dict]  # Будет заполняться из Registry
 
