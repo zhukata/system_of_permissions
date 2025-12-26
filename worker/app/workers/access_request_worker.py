@@ -13,7 +13,7 @@ from app.core.db import SessionLocal
 from app.core.rabbitmq import ACCESS_REQUEST_QUEUE
 from common.enums import AccessAction
 from common.models.access_request import AccessRequestStatus
-from app.services.registry_client import RegistryClient
+from common.clients.registry_client import RegistryClient
 from app.services.requests import get_access_request, update_request_status
 
 
@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 class AccessRequestWorker:
     def __init__(self):
-        self.registry = RegistryClient()
+        self.registry = RegistryClient(settings.registry_service_url)
         self.connection: Optional[pika.BlockingConnection] = None
         self.channel: Optional[BlockingChannel] = None
         self._stop_requested = False
@@ -98,45 +98,82 @@ class AccessRequestWorker:
         return True, None
 
 
-    def _on_message_callback(self, ch: BlockingChannel, method: Any, properties: Any, body: bytes):
-        """Обработка входящего сообщения из очереди."""
+    def _on_message_callback(
+        self,
+        ch: BlockingChannel,
+        method: Any,
+        properties: Any,
+        body: bytes,
+    ):
         request_id_str = "unknown"
+
         try:
             payload = json.loads(body.decode("utf-8"))
             request_id = uuid.UUID(payload["request_id"])
             request_id_str = str(request_id)
-            
-            logger.info(f"Начало обработки заявки: {request_id_str}")
+
+            logger.info(f"[request_id={request_id_str}] получено сообщение")
 
             with SessionLocal() as db:
                 request = get_access_request(db, request_id_str)
+
                 if not request:
-                    logger.warning(f"Заявка {request_id_str} не найдена в БД. Пропуск.")
+                    logger.warning(
+                        f"[request_id={request_id_str}] заявка не найдена, ACK"
+                    )
                     ch.basic_ack(delivery_tag=method.delivery_tag)
                     return
 
-                # Переводим в процесс
-                self._update_status(db, request_id, AccessRequestStatus.PROCESSING)
+                if request.status in (
+                    AccessRequestStatus.APPROVED,
+                    AccessRequestStatus.REJECTED,
+                ):
+                    logger.info(
+                        f"[request_id={request_id_str}] заявка уже финализирована ({request.status}), пропуск"
+                    )
+                    ch.basic_ack(delivery_tag=method.delivery_tag)
+                    return
 
-                # Бизнес-логика
-                success, error_reason = self._process_business_logic(db, request)
+                self._update_status(
+                    db,
+                    request_id,
+                    AccessRequestStatus.PROCESSING,
+                )
+
+                success, error_reason = self._process_access_request(request)
 
                 if success:
-                    self._update_status(db, request_id, AccessRequestStatus.APPROVED)
-                    logger.info(f"Заявка {request_id_str} успешно одобрена")
+                    self._update_status(
+                        db,
+                        request_id,
+                        AccessRequestStatus.APPROVED,
+                    )
+                    logger.info(
+                        f"[request_id={request_id_str}] заявка одобрена"
+                    )
                 else:
-                    self._update_status(db, request_id, AccessRequestStatus.REJECTED, error_reason)
-                    logger.info(f"Заявка {request_id_str} отклонена: {error_reason}")
+                    self._update_status(
+                        db,
+                        request_id,
+                        AccessRequestStatus.REJECTED,
+                        error_reason,
+                    )
+                    logger.info(
+                        f"[request_id={request_id_str}] заявка отклонена: {error_reason}"
+                    )
 
             ch.basic_ack(delivery_tag=method.delivery_tag)
 
         except json.JSONDecodeError:
-            logger.error("Некорректный формат JSON. Сообщение отброшено.")
+            logger.error("Некорректный JSON, сообщение отброшено")
             ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+
         except Exception as e:
-            logger.exception(f"Критическая ошибка при обработке {request_id_str}: {e}")
-            # Возвращаем в очередь для повторной попытки (requeue=True)
+            logger.exception(
+                f"[request_id={request_id_str}] ошибка обработки: {e}"
+            )
             ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
+
 
     def stop(self, *args):
         """Безопасная остановка."""

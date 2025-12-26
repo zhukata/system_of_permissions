@@ -2,26 +2,18 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    # Database (тот же Postgres, что и у ARS)
-    database_url: str = "postgresql://ars:ars@localhost:5432/ars"
+    database_url: str
 
-    # RabbitMQ
-    rabbitmq_host: str = "localhost"
-    rabbitmq_port: int = 5672
-    rabbitmq_user: str = "guest"
-    rabbitmq_password: str = "guest"
-    rabbitmq_vhost: str = "/"
+    rabbitmq_host: str
+    rabbitmq_port: int
+    rabbitmq_user: str
+    rabbitmq_password: str
+    rabbitmq_vhost: str
 
-    # Registry Service (source of truth)
-    registry_service_url: str = "http://localhost:8001"
+    registry_service_url: str
 
     class Config:
         env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = False
-        fields = {
-            "registry_service_url": {"env": "REGISTRY_SERVICE_URL"},
-        }
 
     @property
     def rabbitmq_url(self) -> str:
@@ -32,4 +24,3 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
-

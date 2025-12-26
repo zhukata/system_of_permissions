@@ -92,7 +92,7 @@ services:
     container_name: registry
     command: uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
     environment:
-      REGISTRY_DATABASE_URL: postgresql://ars:ars@postgres:5432/ars
+      DATABASE_URL: postgresql://ars:ars@postgres:5432/ars
     ports:
       - "8001:8001"
     volumes:
