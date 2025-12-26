@@ -2,20 +2,16 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    # Database
     database_url: str = "postgresql://ars:ars@localhost:5432/ars"
     
-    # RabbitMQ
     rabbitmq_host: str = "localhost"
     rabbitmq_port: int = 5672
     rabbitmq_user: str = "guest"
     rabbitmq_password: str = "guest"
     rabbitmq_vhost: str = "/"
     
-    # Registry (бывш. Identity+Catalog) — источник истины
     registry_service_url: str = "http://localhost:8001"
     
-    # Application
     app_name: str = "Access Request Service"
     
     @property

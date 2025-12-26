@@ -1,15 +1,11 @@
-"""
-Сервисы для работы с заявками на доступ.
-
-ARS - тонкий слой: только сохранение, чтение и отправка в очередь.
-Вся бизнес-логика (конфликты, проверки) - в Worker'ах.
-"""
 import logging
 from sqlalchemy.orm import Session
 
 from app.core.rabbitmq import get_publisher
+from common.enums import AccessRequestStatus
 from common.models.access_request import AccessRequest
 from app.schemas.access_request import AccessRequestCreate
+
 
 logger = logging.getLogger(__name__)
 
@@ -57,20 +53,19 @@ def get_user_requests(db: Session, user_id: str) -> list[AccessRequest]:
 
 
 def update_request_status(
-    db: Session, request_id: str, status: str, rejection_reason: str | None = None
+    db: Session, request_id: str, status: AccessRequestStatus, rejection_reason: str | None = None
 ) -> AccessRequest:
     """
     Обновляет статус заявки.
     
     Используется Worker'ом для обновления статуса после обработки.
     """
-    from common.models.access_request import AccessRequestStatus
     
     req = get_access_request(db, request_id)
     if not req:
         raise ValueError(f"Заявка {request_id} не найдена")
     
-    req.status = AccessRequestStatus(status)
+    req.status = AccessRequestStatus
     if rejection_reason:
         req.rejection_reason = rejection_reason
     
@@ -79,4 +74,3 @@ def update_request_status(
     
     logger.info(f"Статус заявки {request_id} обновлен на {status}")
     return req
-

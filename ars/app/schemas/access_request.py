@@ -28,8 +28,11 @@ class AccessRequestResponse(BaseModel):
         from_attributes = True
 
 
-class UserPermissionsResponse(BaseModel):
-    """Схема для получения прав пользователя (read-модель)."""
-    user_id: uuid.UUID
-    permission_groups: list[dict]  # Будет заполняться из Registry
+class PermissionGroupRead(BaseModel):
+    id: uuid.UUID
+    name: str | None = None
 
+
+class UserPermissionsResponse(BaseModel):
+    user_id: uuid.UUID
+    permission_groups: list[PermissionGroupRead]

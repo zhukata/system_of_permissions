@@ -1,8 +1,3 @@
-"""
-RabbitMQ Publisher для отправки задач в очередь.
-
-ARS отправляет события в очередь, Worker'ы их обрабатывают.
-"""
 import json
 import logging
 from typing import Optional
@@ -93,4 +88,3 @@ def get_publisher() -> RabbitMQPublisher:
     if _publisher is None:
         _publisher = RabbitMQPublisher()
     return _publisher
-

@@ -1,18 +1,10 @@
-"""
-API endpoints для работы с заявками на доступ.
-
-ARS - тонкий HTTP-слой:
-- Принимает заявки (create/revoke)
-- Отдает статусы заявок
-- Отдает read-модели (права пользователя, заявки пользователя)
-- Кладет задачи в очередь (через сервисы)
-"""
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.db import SessionLocal
+from app.core.config import settings
 from app.schemas.access_request import (
     AccessRequestCreate,
     AccessRequestResponse,
@@ -23,6 +15,8 @@ from app.services.access_request import (
     get_access_request,
     get_user_requests,
 )
+from common.clients.registry_client import RegistryClient
+
 
 router = APIRouter(prefix="/access-requests", tags=["access-requests"])
 
@@ -78,14 +72,12 @@ def get_user_permissions(
 ):
     """
     Получает текущие права пользователя (read-модель).
-    
-    TODO: Интеграция с Identity+Catalog Service для получения актуальных прав.
-    Пока возвращает заглушку.
     """
-    # TODO: HTTP запрос к Registry Service
-    # GET {registry_service_url}/users/{user_id}/permissions
+    client = RegistryClient(settings.registry_service_url)
+
+    permissions = client.get_user_permission_groups(user_id)
     return UserPermissionsResponse(
         user_id=user_id,
-        permission_groups=[],
+        permission_groups=permissions,
     )
 
