@@ -1,9 +1,9 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
-from app.core.db import engine
-from app.models import Base
-from app.api import admin, internal
+from registry.app.core.db import engine
+from registry.app.models import Base
+from registry.app.api import admin, internal
 
 
 @asynccontextmanager

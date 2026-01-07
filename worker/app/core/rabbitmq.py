@@ -5,7 +5,7 @@ from typing import Optional
 import pika
 from pika.exceptions import AMQPConnectionError, AMQPChannelError
 
-from app.core.config import settings
+from worker.app.core.config import settings
 
 logger = logging.getLogger(__name__)
 

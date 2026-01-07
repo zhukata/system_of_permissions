@@ -1,20 +1,5 @@
 import uuid
-from datetime import datetime
 from pydantic import BaseModel
-
-
-class UserCreate(BaseModel):
-    id: uuid.UUID | None = None
-    email: str | None = None
-
-
-class UserResponse(BaseModel):
-    id: uuid.UUID
-    email: str | None = None
-    created_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class PermissionGroupCreate(BaseModel):
@@ -47,4 +32,3 @@ class PermissionGroupAssignmentResponse(BaseModel):
     success: bool
     user_id: uuid.UUID
     group_id: uuid.UUID
-

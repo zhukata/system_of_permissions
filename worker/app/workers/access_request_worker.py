@@ -8,16 +8,15 @@ import pika
 from pika.adapters.blocking_connection import BlockingChannel
 from sqlalchemy.orm import Session
 
-from app.core.config import settings
-from app.core.db import SessionLocal
-from app.core.rabbitmq import ACCESS_REQUEST_QUEUE
+from worker.app.core.config import settings
+from worker.app.core.db import SessionLocal
+from worker.app.core.rabbitmq import ACCESS_REQUEST_QUEUE
 from common.enums import AccessAction
 from common.models.access_request import AccessRequestStatus
 from common.clients.registry_client import RegistryClient
-from app.services.requests import get_access_request, update_request_status
+from worker.app.services.requests import get_access_request, update_request_status
 
 
-# Настройка логирования
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
@@ -35,7 +34,7 @@ class AccessRequestWorker:
     def _connect(self) -> None:
         """Установка соединения с RabbitMQ."""
         self.registry.close()
-        self.registry = RegistryClient()
+        self.registry = RegistryClient(settings.registry_service_url)
 
         params = pika.URLParameters(settings.rabbitmq_url)
         self.connection = pika.BlockingConnection(params)

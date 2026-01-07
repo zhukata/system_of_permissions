@@ -1,10 +1,10 @@
 import logging
 from sqlalchemy.orm import Session
 
-from app.core.rabbitmq import get_publisher
+from ars.app.core.rabbitmq import get_publisher
 from common.enums import AccessRequestStatus
 from common.models.access_request import AccessRequest
-from app.schemas.access_request import AccessRequestCreate
+from ars.app.schemas.access_request import AccessRequestCreate
 
 
 logger = logging.getLogger(__name__)

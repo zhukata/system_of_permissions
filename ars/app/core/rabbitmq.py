@@ -5,7 +5,7 @@ from typing import Optional
 import pika
 from pika.exceptions import AMQPConnectionError, AMQPChannelError
 
-from app.core.config import settings
+from ars.app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +27,6 @@ class RabbitMQPublisher:
                 parameters = pika.URLParameters(settings.rabbitmq_url)
                 self._connection = pika.BlockingConnection(parameters)
                 self._channel = self._connection.channel()
-                # Объявляем очередь (idempотентная операция)
                 self._channel.queue_declare(queue=ACCESS_REQUEST_QUEUE, durable=True)
                 logger.info("Подключение к RabbitMQ установлено")
             except (AMQPConnectionError, AMQPChannelError) as e:
@@ -37,27 +36,17 @@ class RabbitMQPublisher:
     def publish_access_request_created(
         self, request_id: str, user_id: str, permission_group_id: str, action: str
     ):
-        """
-        Публикует событие о создании заявки на доступ.
-        
-        Worker'ы подхватят это событие и обработают заявку.
-        
-        Args:
-            request_id: UUID заявки
-            user_id: UUID пользователя
-            permission_group_id: UUID группы прав
-            action: Действие (GRANT/REVOKE)
-        """
+        """Публикует событие о создании заявки на доступ."""
         try:
             self._ensure_connection()
-            
+
             message = {
                 "request_id": request_id,
                 "user_id": user_id,
                 "permission_group_id": permission_group_id,
                 "action": action,
             }
-            
+
             self._channel.basic_publish(
                 exchange="",
                 routing_key=ACCESS_REQUEST_QUEUE,

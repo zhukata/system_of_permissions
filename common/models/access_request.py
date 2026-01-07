@@ -1,4 +1,3 @@
-import enum
 import uuid
 from datetime import datetime
 
@@ -6,17 +5,7 @@ from sqlalchemy import Column, DateTime, Enum, String
 from common.db.base import Base
 from sqlalchemy.dialects.postgresql import UUID
 
-
-class AccessRequestStatus(str, enum.Enum):
-    PENDING = "PENDING"
-    PROCESSING = "PROCESSING"
-    APPROVED = "APPROVED"
-    REJECTED = "REJECTED"
-
-
-class AccessAction(str, enum.Enum):
-    GRANT = "GRANT"
-    REVOKE = "REVOKE"
+from common.enums import AccessAction, AccessRequestStatus
 
 
 class AccessRequest(Base):

@@ -37,10 +37,10 @@ services:
 
   ars-api:
     build:
-      context: ./ars
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ars/Dockerfile
     container_name: ars_api
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn ars.app.main:app --host 0.0.0.0 --port 8000 --reload
     ports:
       - "8000:8000"
     environment:
@@ -52,7 +52,8 @@ services:
       RABBITMQ_VHOST: /
       REGISTRY_SERVICE_URL: http://registry:8001
     volumes:
-      - ./ars:/app
+      - ./ars:/src/ars
+      - ./common:/src/common
     depends_on:
       postgres:
         condition: service_healthy
@@ -62,10 +63,10 @@ services:
 
   ars-worker:
     build:
-      context: ./worker
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: worker/Dockerfile
     container_name: ars_worker
-    command: python run_worker.py
+    command: python -m worker.app.workers.access_request_worker
     environment:
       DATABASE_URL: postgresql://ars:ars@postgres:5432/ars
       RABBITMQ_HOST: rabbitmq
@@ -75,7 +76,8 @@ services:
       RABBITMQ_VHOST: /
       REGISTRY_SERVICE_URL: http://registry:8001
     volumes:
-      - ./worker:/app
+      - ./worker:/src/worker
+      - ./common:/src/common
     depends_on:
       postgres:
         condition: service_healthy
@@ -87,16 +89,17 @@ services:
 
   registry:
     build:
-      context: ./registry
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: registry/Dockerfile
     container_name: registry
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
+    command: uvicorn registry.app.main:app --host 0.0.0.0 --port 8001 --reload
     environment:
       DATABASE_URL: postgresql://ars:ars@postgres:5432/ars
     ports:
       - "8001:8001"
     volumes:
-      - ./registry:/app
+      - ./registry:/src/registry
+      - ./common:/src/common
     depends_on:
       postgres:
         condition: service_healthy

@@ -3,14 +3,14 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.core.db import SessionLocal
-from app.core.config import settings
-from app.schemas.access_request import (
+from ars.app.core.db import SessionLocal
+from ars.app.core.config import settings
+from ars.app.schemas.access_request import (
     AccessRequestCreate,
     AccessRequestResponse,
     UserPermissionsResponse,
 )
-from app.services.access_request import (
+from ars.app.services.access_request import (
     create_access_request,
     get_access_request,
     get_user_requests,

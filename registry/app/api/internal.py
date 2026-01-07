@@ -4,15 +4,15 @@ from typing import List
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db
-from app import models, schemas
+from registry.app.api.deps import get_db
+from registry.app import models, schemas
 
 router = APIRouter(prefix="/internal", tags=["internal"])
 
 
 @router.get(
     "/users/{user_id}/permission-groups",
-    response_model=List[schemas.PermissionGroupShort],
+    response_model=List[schemas.PermissionGroupResponse],
 )
 def get_user_permission_groups(
     user_id: uuid.UUID,
@@ -27,7 +27,7 @@ def get_user_permission_groups(
         .all()
     )
     return [
-        schemas.PermissionGroupShort(
+        schemas.PermissionGroupResponse(
             id=row.group.id,
             name=row.group.name,
         )
